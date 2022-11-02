@@ -59,6 +59,7 @@ namespace MicroOCR
                 resizeImgTensor.Add(imgTensor);
             }
             var images = torch.stack(resizeImgTensor).to(device);
+            //foreach (var img in resizeImgTensor) img.Dispose();
             return new BatchItem
             {
                 labels = labels,
