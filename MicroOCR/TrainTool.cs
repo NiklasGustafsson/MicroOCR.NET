@@ -25,7 +25,7 @@ namespace MicroOCR
                 character += line.TrimEnd();
             }
             var trainLoader = BuildDataloader(cfg[CfgNode.TrainRoot].ToString(), cfg[CfgNode.TrainLabel].ToString(), (int)cfg[CfgNode.BatchSize], true, device);
-            var testLoader = BuildDataloader(cfg[CfgNode.TestRoot].ToString(), cfg[CfgNode.TestLabel].ToString(), (int)cfg[CfgNode.BatchSize], false, device);
+            var testLoader = BuildDataloader(cfg[CfgNode.TestRoot].ToString(), cfg[CfgNode.TestLabel].ToString(), (int)cfg[CfgNode.BatchSize], true, device);
             var converter = BuildConverter(character);
             var lossFun = BuildLoss(device);
             var average = BuildAverageMeter();
@@ -44,6 +44,7 @@ namespace MicroOCR
             foreach (var epoch in Enumerable.Range(0, (int)cfg[CfgNode.Epochs]))
             {
                 model.train();
+
                 int charCorrects = 0, wordCorrects = 0, allWord = 1, allChar = 1;
                 var since = Environment.TickCount;
                 int batchIdx = 0;
@@ -78,7 +79,7 @@ namespace MicroOCR
                         if(wordAcc > bestWordAcc)
                         {
                             bestWordAcc = wordAcc;
-                            SaveModel(model, cfg[CfgNode.ModelType].ToString(), (epoch + 1).ToString(), (int)cfg[CfgNode.Nh], (int)cfg[CfgNode.Depth], wordAcc, charAcc);
+                            //SaveModel(model, cfg[CfgNode.ModelType].ToString(), (epoch + 1).ToString(), (int)cfg[CfgNode.Nh], (int)cfg[CfgNode.Depth], wordAcc, charAcc);
                         }
                     }
                     batchIdx += 1;
@@ -92,7 +93,7 @@ namespace MicroOCR
                         bestWordAcc = wordAcc;
                         epochStr = "best";
                     }
-                    SaveModel(model, cfg[CfgNode.ModelType].ToString(), epochStr, (int)cfg[CfgNode.Nh], (int)cfg[CfgNode.Depth], wordAcc, charAcc);
+                    //SaveModel(model, cfg[CfgNode.ModelType].ToString(), epochStr, (int)cfg[CfgNode.Nh], (int)cfg[CfgNode.Depth], wordAcc, charAcc);
                 }
                 average.Reset();
                 scheduler.step(epoch);
@@ -169,6 +170,7 @@ namespace MicroOCR
 
         public static optim.Optimizer BuildOptimizer(Module<Tensor, Tensor> model, double lr = 0.0001)
         {
+            //return optim.RMSProp(model.parameters(), lr);
             return optim.Adam(model.parameters(), lr, 0.5, 0.999, weight_decay:0.0001);
         }
 
@@ -187,8 +189,9 @@ namespace MicroOCR
         public static LRScheduler BuildScheduler(optim.Optimizer optimizer)
         {
             var milestones = new List<int>();
-            milestones.Add(30);
-            var scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones, gamma: 0.1);
+            milestones.Add(10);
+            //var scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones, gamma: 0.1);
+            var scheduler = optim.lr_scheduler.StepLR(optimizer, 15, gamma: 0.90);
             return scheduler;
         }
 

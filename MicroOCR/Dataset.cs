@@ -11,6 +11,7 @@ namespace MicroOCR
         public TextLineDataset(string dataDir, string labelFile)
         {
             GetImageInfoList(labelFile);
+            torchvision.io.DefaultImager = new torchvision.io.SkiaImager();
             _dataDir = dataDir;
         }
 
@@ -33,8 +34,9 @@ namespace MicroOCR
             var imgName = subStrings[0];
             var label = subStrings[1];
             var imgPath = Path.Combine(_dataDir, imgName);
-            var image = Cv2.ImRead(imgPath);
-            Cv2.CvtColor(image, image, ColorConversionCodes.BGR2RGB);
+            //var image = Cv2.ImRead(imgPath);
+            //Cv2.CvtColor(image, image, ColorConversionCodes.BGR2RGB);
+            var image = torchvision.io.read_image(imgPath);
             return new TextLineDataSetItem
             {
                 label = label,
@@ -46,7 +48,7 @@ namespace MicroOCR
     public class TextLineDataSetItem
     {
         public string label;
-        public Mat image;
+        public torch.Tensor image;
     }
     public class BatchItem
     {

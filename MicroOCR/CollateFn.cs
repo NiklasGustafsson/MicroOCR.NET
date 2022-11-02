@@ -37,22 +37,24 @@ namespace MicroOCR
 
         public static BatchItem Collate(IEnumerable<TextLineDataSetItem> items, torch.Device device)
         {
-            List<Mat> allSameHeightImage = new List<Mat>();
+            //List<Mat> allSameHeightImage = new List<Mat>();
             var itemList = items.ToList<TextLineDataSetItem>();
             var transform = torchvision.transforms.ConvertImageDType(torch.ScalarType.Float32);
-            foreach (var item in items)
-            {
-                allSameHeightImage.Add(ResizeWithSpecificHeight(32, item.image));
-            }
-            var maxImgWidth = allSameHeightImage.Max(mat => mat.Size().Width);
-            maxImgWidth = (int)Math.Ceiling((double)maxImgWidth / 8) * 8;
+            var resize = torchvision.transforms.Resize(32, 88);
+            //foreach (var item in items)
+            //{
+            //    allSameHeightImage.Add(ResizeWithSpecificHeight(32, item.image));
+            //}
+            //var maxImgWidth = allSameHeightImage.Max(mat => mat.Size().Width);
+            //maxImgWidth = (int)Math.Ceiling((double)maxImgWidth / 8) * 8;
             List<torch.Tensor> resizeImgTensor = new List<torch.Tensor>();
             List<string> labels = new List<string>();
             for (int i = 0; i < items.Count(); i++)
             {
                 labels.Add(itemList[i].label);
-                var img = PadImageWidth(allSameHeightImage[i], maxImgWidth);
-                var imgTensor = transform.forward(img).reshape(3, 32, maxImgWidth);
+                //var img = PadImageWidth(allSameHeightImage[i], maxImgWidth);
+                var img = itemList[i].image;
+                var imgTensor = resize.forward(transform.forward(img)); //.reshape(3, 32, maxImgWidth);
                 //var imgTensor = torch.tensor(img, torch.uint8).div(255).reshape(3, 32, maxImgWidth).to(torch.float32);
                 resizeImgTensor.Add(imgTensor);
             }

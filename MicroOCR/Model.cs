@@ -49,24 +49,20 @@ namespace MicroOCR
 
     public class MicroStage : Module<Tensor, Tensor>
     {
-        private readonly ModuleList<Module<Tensor, Tensor>> microBlocks = new ModuleList<Module<Tensor, Tensor>>();
+        private readonly Sequential microBlocks = Sequential();
 
         public MicroStage(long depth, long nh) : base("MicroStage")
         {
             for (int i = 0; i < depth; i++)
             {
-                microBlocks.Add(new MicroBlock(nh));
+                microBlocks.append(new MicroBlock(nh));
             }
             RegisterComponents();
         }
 
         public override Tensor forward(Tensor input)
         {
-            for (int index = 0; index < microBlocks.Count; index++)
-            {
-                input = microBlocks[index].forward(input);
-            }
-            return input;
+            return microBlocks.forward(input);
         }
     }
 
@@ -82,7 +78,7 @@ namespace MicroOCR
             linear1 = Linear(inputDim, hiddenDim);
             gelu = GELU();
             linear2 = Linear(hiddenDim, inputDim);
-            //dropout = Dropout(0.1);
+            dropout = Dropout(0.5);
             RegisterComponents();
         }
 
@@ -91,7 +87,7 @@ namespace MicroOCR
             var x = linear1.forward(input);
             x = gelu.forward(x);
             x = linear2.forward(x);
-            //x = dropout.forward(x);
+            x = dropout.forward(x);
             return x;
         }
     }
@@ -134,24 +130,20 @@ namespace MicroOCR
 
     public class MLPStage : Module<Tensor, Tensor>
     {
-        private readonly ModuleList<Module<Tensor, Tensor>> mlpBlocks = new ModuleList<Module<Tensor, Tensor>>();
+        private readonly Sequential mlpBlocks = Sequential();
 
         public MLPStage(long depth, long inputDim, long hiddenDim) : base("MLPStage")
         {
             for (int i = 0; i < depth; i++)
             {
-                mlpBlocks.Add(new MLPBlock(inputDim, hiddenDim));
+                mlpBlocks.append(new MLPBlock(inputDim, hiddenDim));
             }
             RegisterComponents();
         }
 
         public override Tensor forward(Tensor input)
         {
-            for (int index = 0; index < mlpBlocks.Count; index++)
-            {
-                input = mlpBlocks[index].forward(input);
-            }
-            return input;
+            return mlpBlocks.forward(input);
         }
     }
 
@@ -195,7 +187,7 @@ namespace MicroOCR
             microstage = new MicroStage(depth, nh);
             mlpstages = new MLPStage(depth, nh, nh);
             flatten = Flatten(1, 2);
-            dropout = Dropout(0.1);
+            dropout = Dropout(0.5);
             long linearIn = nh * imgHeight / 4;
             fc = Linear(linearIn, numClass);
             RegisterComponents();
@@ -203,6 +195,7 @@ namespace MicroOCR
 
         public override Tensor forward(Tensor input)
         {
+            using var _ = NewDisposeScope();
             var xShape = input.size();
             var x = embed.forward(input);
             x = microstage.forward(x);
@@ -212,7 +205,7 @@ namespace MicroOCR
             x = x.permute(0, 2, 1);
             x = dropout.forward(x);
             x = fc.forward(x);
-            return x;
+            return x.MoveToOuterDisposeScope();
         }
     }
 }
