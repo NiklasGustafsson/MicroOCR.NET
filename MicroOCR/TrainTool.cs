@@ -51,6 +51,8 @@ namespace MicroOCR
                 
                 foreach (var batchItem in trainLoader)
                 {
+                    using var _ = torch.NewDisposeScope();
+
                     var (targets, targetsLength) = converter.Encode(batchItem.labels);
                     var images = batchItem.images;
                     targets = targets.to(device);
@@ -107,6 +109,7 @@ namespace MicroOCR
             int charCorrects = 0, wordCorrects = 0, allWord = 0, allChar = 0;
             using (torch.no_grad())
             {
+                using var _ = torch.NewDisposeScope();
                 var since = Environment.TickCount;
                 int batchIdx = 0;
                 foreach (var batchItem in testLoader)
