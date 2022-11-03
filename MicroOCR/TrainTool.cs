@@ -6,6 +6,7 @@ using static TorchSharp.torch.optim.lr_scheduler;
 using static MicroOCR.CollateFn;
 using static TorchSharp.torch.optim.lr_scheduler.impl;
 using TorchSharp.Modules;
+using System.Diagnostics;
 
 namespace MicroOCR
 {
@@ -48,8 +49,14 @@ namespace MicroOCR
 
             var writer = torch.utils.tensorboard.SummaryWriter();
 
-            foreach (var epoch in Enumerable.Range(0, (int)cfg[CfgNode.Epochs]))
+            foreach (var epoch in Enumerable.Range(1, (int)cfg[CfgNode.Epochs]))
             {
+                var sw = new Stopwatch();
+                sw.Start();
+
+                Console.WriteLine($">>> EPOCH {epoch}");
+                Console.WriteLine();
+
                 model.train();
 
                 int charCorrects = 0, wordCorrects = 0, allWord = 1, allChar = 1;
@@ -82,7 +89,7 @@ namespace MicroOCR
 
                         lastWordAcc = (float)wordCorrects / allWord;
 
-                        string logStr = $"Train:[epoch {epoch + 1}/{cfg[CfgNode.Epochs]}][step {batchIdx + 1}/{trainLoader.Count} ({(float)100 * (batchIdx + 1) / trainLoader.Count:F0}%] lr:{optimizer.ParamGroups.First().LearningRate:F5} Loss:{average._avg:F4} Word Acc:{(float)wordCorrects / allWord:F4} Char Acc:{(float)charCorrects / allChar:F4} Cost time:{costTime}s Estimated time:{costTime * trainLoader.Count / (batchIdx + 1) - costTime}s";
+                        string logStr = $"Train:[epoch {epoch}/{cfg[CfgNode.Epochs]}][step {batchIdx + 1}/{trainLoader.Count} ({(float)100 * (batchIdx + 1) / trainLoader.Count:F0}%] lr:{optimizer.ParamGroups.First().LearningRate:F5} Loss:{average._avg:F4} Word Acc:{(float)wordCorrects / allWord:F4} Char Acc:{(float)charCorrects / allChar:F4} Cost time:{costTime}s Estimated time:{costTime * trainLoader.Count / (batchIdx + 1) - costTime}s";
                         Console.WriteLine(logStr);
                     }
                     if((batchIdx + 1) % (int)cfg[CfgNode.EvalStepInterval] == 0)
@@ -99,14 +106,14 @@ namespace MicroOCR
 
                     batchItem.images.Dispose();
                 }
-                if ((epoch + 1) % (int)cfg[CfgNode.SaveEpochInterval] == 0)
+                if (epoch % (int)cfg[CfgNode.SaveEpochInterval] == 0)
                 {
                     var (wordAcc, charAcc, valLoss) = TestModel(model, device, testLoader, converter, metric, lossFun, (int)cfg[CfgNode.ShowStrSize]);
 
-                    writer.add_scalar("Validation Word Acc", wordAcc, epoch + 1);
-                    writer.add_scalar("Validation Loss", valLoss, epoch + 1);
+                    writer.add_scalar("Validation Word Acc", wordAcc, epoch);
+                    writer.add_scalar("Validation Loss", valLoss, epoch);
 
-                    string epochStr = (epoch + 1).ToString();
+                    string epochStr = epoch.ToString();
                     if (wordAcc > bestWordAcc)
                     {
                         bestWordAcc = wordAcc;
@@ -116,6 +123,12 @@ namespace MicroOCR
                 }
                 average.Reset();
                 scheduler.step(lastWordAcc, epoch);
+
+                sw.Stop();
+
+                Console.WriteLine();
+                Console.WriteLine($"<<< EPOCH {epoch} finished in {sw.Elapsed.TotalSeconds:F3} s");
+                Console.WriteLine();
             }
         }
 
@@ -218,7 +231,7 @@ namespace MicroOCR
             milestones.Add(10);
             //var scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones, gamma: 0.1);
             //var scheduler = optim.lr_scheduler.StepLR(optimizer, 15, gamma: 0.90);
-            var scheduler = (ReduceLROnPlateau)optim.lr_scheduler.ReduceLROnPlateau(optimizer, "max", patience:3, threshold: 0.01, threshold_mode: "abs");
+            var scheduler = (ReduceLROnPlateau)optim.lr_scheduler.ReduceLROnPlateau(optimizer, "max", factor: 0.5, patience:3, min_lr: new[] { 0.0001 }, threshold: 0.01, threshold_mode: "abs");
             return scheduler;
         }
 
