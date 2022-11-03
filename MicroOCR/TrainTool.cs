@@ -44,8 +44,6 @@ namespace MicroOCR
             float lastWordAcc = 0;
             float bestWordAcc = 0;
 
-            int valCount = 0;
-
             //Console.WriteLine(targetsLength.ToString(TorchSharp.TensorStringStyle.Julia));
 
             var writer = torch.utils.tensorboard.SummaryWriter();
@@ -89,17 +87,13 @@ namespace MicroOCR
                     }
                     if((batchIdx + 1) % (int)cfg[CfgNode.EvalStepInterval] == 0)
                     {
-                        var (wordAcc, charAcc, valLoss) = TestModel(model, device, testLoader, converter, metric, lossFun, (int)cfg[CfgNode.ShowStrSize]);
+                        var (wordAcc, charAcc, _) = TestModel(model, device, testLoader, converter, metric, lossFun, (int)cfg[CfgNode.ShowStrSize]);
                         if(wordAcc > bestWordAcc)
                         {
                             bestWordAcc = wordAcc;
 
                             //SaveModel(model, cfg[CfgNode.ModelType].ToString(), (epoch + 1).ToString(), (int)cfg[CfgNode.Nh], (int)cfg[CfgNode.Depth], wordAcc, charAcc);
                         }
-
-                        writer.add_scalar("Validation Word Acc", wordAcc, valCount);
-                        writer.add_scalar("Validation Loss", valLoss, valCount);
-                        valCount += 1;
                     }
                     batchIdx += 1;
 
@@ -107,7 +101,11 @@ namespace MicroOCR
                 }
                 if ((epoch + 1) % (int)cfg[CfgNode.SaveEpochInterval] == 0)
                 {
-                    var (wordAcc, charAcc, _) = TestModel(model, device, testLoader, converter, metric, lossFun, (int)cfg[CfgNode.ShowStrSize]);
+                    var (wordAcc, charAcc, valLoss) = TestModel(model, device, testLoader, converter, metric, lossFun, (int)cfg[CfgNode.ShowStrSize]);
+
+                    writer.add_scalar("Validation Word Acc", wordAcc, epoch + 1);
+                    writer.add_scalar("Validation Loss", valLoss, epoch + 1);
+
                     string epochStr = (epoch + 1).ToString();
                     if (wordAcc > bestWordAcc)
                     {

@@ -27,9 +27,9 @@ namespace MicroOCR
             cfg.Add(CfgNode.InChannels, 3);
             cfg.Add(CfgNode.Lr, 0.001);
             cfg.Add(CfgNode.BatchSize, 32);
-            cfg.Add(CfgNode.Epochs, 20);
+            cfg.Add(CfgNode.Epochs, 50);
             cfg.Add(CfgNode.DisplayStepInterval, 50);
-            cfg.Add(CfgNode.EvalStepInterval, 100);
+            cfg.Add(CfgNode.EvalStepInterval, 250);
             cfg.Add(CfgNode.SaveEpochInterval, 1);
             cfg.Add(CfgNode.ShowStrSize, 10);
             cfg.Add(CfgNode.GpuIndex, 0);
